@@ -66,5 +66,28 @@ async def handleTextMessage(conn, message):
         elif msg_json["type"] == "server":
             if msg_json["action"] == "update_config":
                 await conn.handle_config_update(msg_json)
+        elif msg_json["type"] == "image":
+            """处理图片消息"""
+            
+            #base64解码
+            image_data = base64.b64decode(msg_json["image"])
+
+            # 检查图片数据是否有效
+            if not image_data.startswith(b'\xff\xd8') or not image_data.endswith(b'\xff\xd9'):
+                logger.bind(tag=TAG).error("无效的图片数据")
+                return
+
+
+            # 确保目录存在
+            image_dir = conn.config.get("image_path", "images/")
+            if not os.path.exists(image_dir):
+                os.makedirs(image_dir)
+
+            # 保存图片
+            image_path = image_dir + conn.session_id + ".jpeg"
+            with open(image_path, "wb+") as image_file:
+                image_file.write(image_data)
+
+            logger.bind(tag=TAG).info(f"图片已保存到: {image_path}")
     except json.JSONDecodeError:
         await conn.websocket.send(message)
